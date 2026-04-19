@@ -52,39 +52,34 @@ selected_metadata = metadata_df.loc[selected_samples]
 # Keeping valid genes
 
 gene_list = [
-
     gene for gene in combined_genes
-
     if gene in selected_data.index
 ]
 
 hallmark_data = selected_data.loc[gene_list]
-
 print("\nNumber of genes used:", len(gene_list))
 
 # Calculating hallmark scores
 
 angiogenesis_valid = [
-
     gene for gene in angiogenesis_genes
-
     if gene in selected_data.index
 ]
 
 growth_valid = [
-
     gene for gene in growth_suppression_genes
-
     if gene in selected_data.index
 ]
 
 angiogenesis_score = selected_data.loc[angiogenesis_valid].mean()
-
 growth_score = selected_data.loc[growth_valid].mean()
-
 selected_metadata["Angiogenesis_Score"] = angiogenesis_score
-
 selected_metadata["Growth_Suppression_Score"] = growth_score
+
+selected_metadata[
+    ["Angiogenesis_Score",
+     "Growth_Suppression_Score"]
+].to_csv("hallmark_scores_PRAD_OV.csv")
 
 # preparing PCA
 
@@ -139,7 +134,28 @@ kmeans = KMeans(n_clusters=2,random_state=42)
 clusters = kmeans.fit_predict(X_scaled)
 pca_df["Cluster"] = clusters
 
-# PCA Plot 3 — Clusters
+# PCA Plot 3 — Growth Suppression Score
+
+plt.figure()
+
+sns.scatterplot(
+    data=pca_df,
+    x="PC1",
+    y="PC2",
+    hue="Growth_Suppression_Score",
+    palette="magma"
+)
+
+plt.title(
+    "PCA Colored by Growth Suppression Score"
+)
+
+plt.xlabel("PC1")
+plt.ylabel("PC2")
+
+plt.show()
+
+# PCA Plot 4 — Clusters
 plt.figure()
 sns.scatterplot(
     data=pca_df,
