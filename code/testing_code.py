@@ -29,7 +29,7 @@ print(metadata_df.describe())
 # %%
 # Subset the data for a specific cancer type
 ####################################################
-cancer_types = ['PRAD', 'OV']  # Breast Invasive Carcinoma
+cancer_types = ['PRAD', 'OV']  
 
 # From metadata, get the rows where "cancer_type" is equal to the specified cancer type
 # Then grab the index of this subset (these are the sample IDs)
