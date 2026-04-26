@@ -1,18 +1,21 @@
 ####################################################
 # Check-In #2
-# PRAD vs OV
-# Hallmarks:
-#   - Induce Angiogenesis
-#   - Evade Growth Suppression
+# PRAD vs OV Classification Pipeline
 ####################################################
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, roc_curve, auc
+)
 
 data = pd.read_csv('data/TRAINING_SET_GSE62944_subsample_log2TPM.csv',index_col=0)
 metadata_df = pd.read_csv('data/TRAINING_SET_GSE62944_metadata.csv',index_col=0)
@@ -169,91 +172,88 @@ plt.title(
 )
 plt.show()
 
-# ============================================================
-# MODELING + EVALUATION PIPELINE (PRAD vs OV classification)
-# ============================================================
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+# SUPERVISED MODEL (LOGISTIC REGRESSION)
 
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score,
-    confusion_matrix, roc_curve, auc
-)
+feature_cols = [
+    "Angiogenesis_Score",
+    "Growth_Suppression_Score"
+]
 
-# ============================================================
-# Prepare features and labels
-# ============================================================
+X_model = selected_metadata[feature_cols]
 
-# Use hallmark scores as features
-feature_cols = ['Angiogenesis_Score', 'Growth_Suppression_Score']
-X = merged_data[feature_cols]
+y = selected_metadata["cancer_type"].map({
+    "PRAD": 0,
+    "OV": 1
+})
 
-# Convert cancer_type to binary labels
-y = merged_data['cancer_type'].map({'PRAD': 0, 'OV': 1})
-
-# Train / validation split
+# Train/validation split
 X_train, X_val, y_train, y_val = train_test_split(
-    X, y, test_size=0.2, random_state=42
+    X_model, y, test_size=0.2, random_state=42
 )
 
-# ============================================================
-# Train model (Logistic Regression)
-# ============================================================
-
+# Train model
 model = LogisticRegression()
 model.fit(X_train, y_train)
 
-# ============================================================
-# Predictions
-# ============================================================
 
-# Training predictions (in-sample)
+# PREDICTIONS
+
 y_train_pred = model.predict(X_train)
-
-# Validation predictions (out-of-sample)
 y_val_pred = model.predict(X_val)
 
-# Probabilities for ROC curve
 y_val_probs = model.predict_proba(X_val)[:, 1]
 
-# ============================================================
-# Metrics
-# ============================================================
+# METRICS
 
-print("========== TRAINING (IN-SAMPLE) ==========")
+
+print("\n===== TRAINING (IN-SAMPLE) =====")
 print("Accuracy:", accuracy_score(y_train, y_train_pred))
 print("Precision:", precision_score(y_train, y_train_pred))
 print("Recall:", recall_score(y_train, y_train_pred))
-print("F1 Score:", f1_score(y_train, y_train_pred))
+print("F1:", f1_score(y_train, y_train_pred))
 
-print("\n========== VALIDATION (OUT-OF-SAMPLE) ==========")
+print("\n===== VALIDATION (OUT-OF-SAMPLE) =====")
 print("Accuracy:", accuracy_score(y_val, y_val_pred))
 print("Precision:", precision_score(y_val, y_val_pred))
 print("Recall:", recall_score(y_val, y_val_pred))
-print("F1 Score:", f1_score(y_val, y_val_pred))
+print("F1:", f1_score(y_val, y_val_pred))
 
-# ============================================================
-# Confusion Matrix
-# ============================================================
+
+train_accuracy = accuracy_score(y_train, y_train_pred)
+val_accuracy = accuracy_score(y_val, y_val_pred)
+
+train_error = 1 - train_accuracy
+val_error = 1 - val_accuracy
+
+print("\n===== IN-SAMPLE ERROR =====")
+print("Training Error:", train_error)
+
+print("\n===== OUT-OF-SAMPLE ERROR =====")
+print("Validation Error:", val_error)
+
+plt.figure()
+plt.bar(["Train Error","Validation Error"], [train_error, val_error])
+plt.ylabel("Error")
+plt.title("In-sample vs Out-of-sample Error")
+plt.show()
+
+
+
+# CONFUSION MATRIX
 
 cm = confusion_matrix(y_val, y_val_pred)
 
 plt.figure()
 sns.heatmap(cm, annot=True, fmt='d')
-plt.xlabel("Predicted Label")
-plt.ylabel("True Label")
-plt.title("Confusion Matrix (Validation Set)")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
 plt.show()
 
-# ============================================================
-# ROC Curve
-# ============================================================
+# ROC CURVE
 
-fpr, tpr, thresholds = roc_curve(y_val, y_val_probs)
+fpr, tpr, _ = roc_curve(y_val, y_val_probs)
 roc_auc = auc(fpr, tpr)
 
 plt.figure()
