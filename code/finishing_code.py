@@ -246,3 +246,68 @@ plt.title(
     "PCA Colored by K-Means Clusters"
 )
 plt.show()
+
+# FINAL INTERPOLATION + CLASS LINES
+
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+x = X_train["Angiogenesis_Score"].values
+y = X_train["Growth_Suppression_Score"].values
+labels = y_train.values
+
+# Split classes
+x_prad = x[labels == 0]
+y_prad = y[labels == 0]
+x_ov = x[labels == 1]
+y_ov = y[labels == 1]
+
+# GRID (for surface)
+grid_x, grid_y = np.meshgrid(
+    np.linspace(x.min(), x.max(), 200),
+    np.linspace(y.min(), y.max(), 200)
+)
+
+grid_points = np.c_[grid_x.ravel(), grid_y.ravel()]
+grid_points_scaled = scaler_model.transform(grid_points)
+
+# MODEL-BASED probabilities
+grid_probs = model.predict_proba(grid_points_scaled)[:, 1]
+grid_probs = grid_probs.reshape(grid_x.shape)
+
+# LINEAR FITS (per cancer type)
+line_x = np.linspace(x.min(), x.max(), 200)
+
+# PRAD
+coef_prad = np.polyfit(x_prad, y_prad, 1)
+line_prad = coef_prad[0] * line_x + coef_prad[1]
+
+# OV
+coef_ov = np.polyfit(x_ov, y_ov, 1)
+line_ov = coef_ov[0] * line_x + coef_ov[1]
+
+# PLOT
+plt.figure(figsize=(9,7))
+
+
+# Scatter points
+sns.scatterplot(
+    x=x,
+    y=y,
+    hue=labels,
+    palette="coolwarm",
+    edgecolor='k'
+)
+
+# Regression lines
+plt.plot(line_x, line_prad, color='blue', linewidth=2, label="PRAD Trend")
+plt.plot(line_x, line_ov, color='red', linewidth=2, label="OV Trend")
+
+# Labels
+plt.xlabel("Angiogenesis Score")
+plt.ylabel("Growth Suppression Score")
+plt.title("Compared Interpolation")
+
+plt.legend()
+plt.show()
